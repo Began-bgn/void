@@ -1,0 +1,95 @@
+name: NotchDeck
+options:
+  bundleIdPrefix: com.notchdeck
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_HARDENED_RUNTIME: YES
+    # Stable identity so Accessibility and other privacy grants survive rebuilds.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: F63KU4246G
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 3.1.0
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.10.0
+targets:
+  NotchDeck:
+    type: application
+    platform: macOS
+    sources: [NotchDeck, Shared]
+    dependencies:
+      - package: KeyboardShortcuts
+      - package: Sparkle
+      - target: NotchDeckWidget
+    info:
+      path: NotchDeck/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Void
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSAppleEventsUsageDescription: Void controls Spotify and Apple Music to show and change the current track.
+        NSCameraUsageDescription: Void uses the camera only during a Face Unlock scan. Images stay on this Mac.
+        NSCalendarsFullAccessUsageDescription: Void shows your upcoming events in the Calendar widget.
+        NSFocusStatusUsageDescription: Void shows when a Focus is on.
+        UTExportedTypeDeclarations:
+          - UTTypeIdentifier: com.notchdeck.widget-id
+            UTTypeDescription: Void Widget
+            UTTypeConformsTo: [public.data]
+    entitlements:
+      path: NotchDeck/Resources/NotchDeck.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.automation.apple-events: true
+        com.apple.security.device.camera: true
+        com.apple.security.personal-information.calendars: true
+        com.apple.security.application-groups: [F63KU4246G.com.notchdeck.shared]
+        # Own group for the Face Unlock credential, so the widget's App Group can't read it.
+        # Needs a provisioning profile, hence automatic signing on this target.
+        keychain-access-groups: [F63KU4246G.com.notchdeck.app.faceunlock]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.notchdeck.app
+        CODE_SIGN_STYLE: Automatic
+        PRODUCT_NAME: Void
+        PRODUCT_MODULE_NAME: NotchDeck
+  NotchDeckWidget:
+    type: app-extension
+    platform: macOS
+    sources: [NotchDeckWidget, Shared, NotchDeck/Util/TimeFormat.swift]
+    info:
+      path: NotchDeckWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Void
+        LSMinimumSystemVersion: "14.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: NotchDeckWidget/NotchDeckWidget.entitlements
+      properties:
+        # Extensions must be sandboxed; the App Group is how it reads what the app writes.
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [F63KU4246G.com.notchdeck.shared]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.notchdeck.app.widget
+        PRODUCT_NAME: NotchDeckWidget
+  NotchDeckTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [NotchDeckTests]
+    dependencies:
+      - target: NotchDeck
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.notchdeck.tests
